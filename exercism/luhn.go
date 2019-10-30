@@ -1,28 +1,47 @@
 package luhn
 
 import(
-	//"fmt"
+	/// "fmt"
+	"strings"
+	"unicode"
 )
 
 func is_odd(n int) bool {
 	return n % 2 == 1
 }
 
-func Luhn(target string) bool {
+func non_digits(str string) string {
+    return strings.Map(
+    	func(r rune) rune {
+	        if unicode.IsDigit(r) {
+	            return -1
+	        }
+	        return r
+    	},
+    	str)
+}
+
+func Valid(target string) bool {
 	sum := 0
-	table := []int {1,2,4,6,8,0,3,5,7,9}
-	if 1 >= len(target){
+	table := []int {0,2,4,6,8,1,3,5,7,9}
+	spaceless := strings.Join(strings.Fields(target), "")
+	// fmt.Println("testing with", s, "now", spaceless)
+	if len(non_digits(spaceless)) > 0 {
 		return false
 	}
-	for i,c := range target[0:len(target)]{
+	if 1 >= len(spaceless){
+		return false
+	}
+	for i,c := range spaceless{
 		dig := int(c) - int('0')
-		if is_odd(len(target)) == is_odd(i){
+		if is_odd(len(spaceless)) == is_odd(i){
 			sum += table[dig]
-			//fmt.Println("summing", dig, i)
+			// fmt.Println("summing", dig, i)
 		}else{
 			sum += dig
 		}
 	}
-	//fmt.Println("resut", target, sum, sum * 9)
+	// fmt.Println("resut", spaceless, sum, sum * 9)
 	return (sum % 10) == 0
 }
+
