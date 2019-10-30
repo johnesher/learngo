@@ -4,7 +4,7 @@ import "testing"
 
 func Test_A_is_odd(t *testing.T) {
 	cases := []struct {
-		in int;
+		in   int
 		want bool
 	}{
 		{3, true},
@@ -18,9 +18,9 @@ func Test_A_is_odd(t *testing.T) {
 	}
 }
 
-func TestOne(t *testing.T){
+func TestOne(t *testing.T) {
 	cases := []struct {
-		in string;
+		in   string
 		want bool
 	}{
 		{"79927398710", false},
@@ -42,9 +42,9 @@ func TestOne(t *testing.T){
 	}
 }
 
-func Test_B_odd_and_even_digits(t *testing.T){
+func Test_B_odd_and_even_digits(t *testing.T) {
 	cases := []struct {
-		in string;
+		in   string
 		want bool
 	}{
 		// 11 digits, should double 1,8,3,2,9
@@ -60,14 +60,13 @@ func Test_B_odd_and_even_digits(t *testing.T){
 	}
 }
 
-
-func Test_B_various_lengths(t *testing.T){
+func Test_B_various_lengths(t *testing.T) {
 	cases := []struct {
-		in string;
+		in   string
 		want bool
 	}{
 		{"", false},  // length of 0
-		{"0", false},  // length of 1
+		{"0", false}, // length of 1
 		{"75", true},
 		{"794", true},
 		{"7997", true},
@@ -99,9 +98,9 @@ func BenchmarkValid(b *testing.B) {
 	}
 }
 
-func Test_B_non_digits(t *testing.T){
+func Test_B_non_digits(t *testing.T) {
 	cases := []struct {
-		in string;
+		in   string
 		want string
 	}{
 		{"", ""},
