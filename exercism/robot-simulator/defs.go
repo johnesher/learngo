@@ -4,7 +4,9 @@ import "fmt"
 
 // definitions used in step 1
 
-var Step1Robot struct {
+var Step1Robot Robot
+
+type Robot struct {
 	X, Y int
 	Dir
 }
