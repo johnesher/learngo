@@ -5,11 +5,11 @@ import (
 )
 
 func Right() {
-	Step1Robot.Dir.Turn(+1)
+	Step1Robot.Dir.Turn(R)
 }
 
 func Left() {
-	Step1Robot.Dir.Turn(-1)
+	Step1Robot.Dir.Turn(L)
 }
 
 // advance 1 step in current direction
@@ -35,6 +35,24 @@ const (
 	W
 )
 
+const (
+	I Command = iota  // ignore
+	L 
+	A         //exploits implicit repetition of the last non-empty expression list
+	R
+)
+
+type Action byte
+
+const (
+	// RL Action = iota // rotate left
+	// F                // forward
+	// RR               // rotate right
+	AN Action = iota // advance North
+	AE // advance East
+	AS // advance South
+	AW // advance West
+)
 
 // attach method to a type
 func (dx Dir) String() string {
@@ -46,13 +64,58 @@ func (dx Dir) String() string {
 	return m[dx]
 }
 
-func (dx *Dir) Turn(way int) {
-	var clockwise = map[Dir]Dir {N: E, E: S, S: W, W: N, }
-	var anticlock = map[Dir]Dir {N: W, W: S, S: E, E: N, }
+func (cmd Command) String() string {
+	m := make(map[Command]string)
+	m[L] = "left"
+	m[A] = "advance"
+	m[R] = "right"
+	return m[cmd]
+}
+
+func (dx *Dir) Turn(way Command) {
+	var clockwise = map[Dir]Dir{N: E, E: S, S: W, W: N}
+	var anticlock = map[Dir]Dir{N: W, W: S, S: E, E: N}
 	switch {
-	case way > 0:
+	case way == R:
 		*dx = clockwise[*dx]
-	case way < 0:
+	case way == L:
 		*dx = anticlock[*dx]
+	}
+}
+
+
+func (rob *Step2Robot)Obey(cmd Command){
+	switch cmd{
+	case A:
+		fmt.Println("advance")
+	default:  // L or R
+		rob.Dir.Turn(cmd)
+	}
+}
+
+func StartRobot(cmd chan Command, act chan Action) {
+	for {
+		what, ok := <-cmd
+		fmt.Println("inpgot", what, ok)
+		if !ok {
+			fmt.Println("channel closing")
+			break
+		} else {
+			fmt.Println("got", what, ok)
+		}
+	}
+}
+
+func Room(extent Rect, robot Step2Robot, act chan Action, rep chan Step2Robot) {
+	fmt.Println(extent, robot)
+	//var a2c = map[Action]Command {F:A, RR:R, RL: L}
+	for {
+		what, ok := <-act
+		if !ok {
+			fmt.Println("channel closing")
+			break
+		} else {
+			fmt.Println("got", what, ok)
+		}
 	}
 }
