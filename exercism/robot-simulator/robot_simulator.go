@@ -36,45 +36,35 @@ const (
 )
 
 const (
-	I Command = iota  // ignore
-	L 
-	A         //exploits implicit repetition of the last non-empty expression list
+	I Command = iota // ignore
+	L
+	A //exploits implicit repetition of the last non-empty expression list
 	R
 )
 
 type Action byte
 
 const (
-	// RL Action = iota // rotate left
-	// F                // forward
-	// RR               // rotate right
-	AN Action = iota // advance North
-	AE // advance East
-	AS // advance South
-	AW // advance West
+	II Action = iota // rotate left
+	LL               // rotate left
+	AA               // forward
+	RR               // rotate right
 )
+
+type FreeSpaces map[Dir]bool
 
 // attach method to a type
 func (dx Dir) String() string {
-	m := make(map[Dir]string)
-	m[N] = "north"
-	m[S] = "south"
-	m[E] = "east"
-	m[W] = "west"
-	return m[dx]
+	return map[Dir]string{N: "north", S: "south", E: "east", W: "west"}[dx]
 }
 
 func (cmd Command) String() string {
-	m := make(map[Command]string)
-	m[L] = "left"
-	m[A] = "advance"
-	m[R] = "right"
-	return m[cmd]
+	return map[Command]string{L: "left", A: "advance", R: "right"}[cmd]
 }
 
 func (dx *Dir) Turn(way Command) {
-	var clockwise = map[Dir]Dir{N: E, E: S, S: W, W: N}
-	var anticlock = map[Dir]Dir{N: W, W: S, S: E, E: N}
+	clockwise := map[Dir]Dir{N: E, E: S, S: W, W: N}
+	anticlock := map[Dir]Dir{N: W, W: S, S: E, E: N}
 	switch {
 	case way == R:
 		*dx = clockwise[*dx]
@@ -83,14 +73,40 @@ func (dx *Dir) Turn(way Command) {
 	}
 }
 
-
-func (rob *Step2Robot)Obey(cmd Command){
-	switch cmd{
-	case A:
-		fmt.Println("advance")
-	default:  // L or R
-		rob.Dir.Turn(cmd)
+// advance 1 step in current direction
+func (rob *Step2Robot) Advance(extent FreeSpaces) {
+	switch rob.Dir {
+	case N:
+		rob.Pos.Northing += 1
+	case E:
+		rob.Pos.Easting += 1
+	case S:
+		rob.Pos.Northing -= 1
+	case W:
+		rob.Pos.Easting -= 1
+	default:
+		fmt.Println("bad direction")
 	}
+}
+
+func (rob *Step2Robot) Turn(cmd Command) {
+	fmt.Println("gothere")
+	rob.Dir.Turn(cmd)
+}
+
+func (rob *Step2Robot) Obey(cmd Command, extent FreeSpaces) {
+	switch cmd {
+	case A:
+		rob.Advance(extent)
+	case I:
+		// ignore it
+	default: // L or R
+		rob.Turn(cmd)
+	}
+}
+
+func (r Rect)Inside(pos Pos)bool{
+	return true
 }
 
 func StartRobot(cmd chan Command, act chan Action) {
@@ -100,22 +116,23 @@ func StartRobot(cmd chan Command, act chan Action) {
 		if !ok {
 			fmt.Println("channel closing")
 			break
-		} else {
-			fmt.Println("got", what, ok)
 		}
+		fmt.Println("got", what, ok)
+		act <- map[Command]Action{I: II, L: LL, A: AA, R: RR}[what]
 	}
 }
 
 func Room(extent Rect, robot Step2Robot, act chan Action, rep chan Step2Robot) {
 	fmt.Println(extent, robot)
-	//var a2c = map[Action]Command {F:A, RR:R, RL: L}
+	avail := FreeSpaces{N:true, E:true, S:true, W:true}
 	for {
 		what, ok := <-act
 		if !ok {
 			fmt.Println("channel closing")
+			rep <- robot
 			break
-		} else {
-			fmt.Println("got", what, ok)
 		}
+		fmt.Println("got", what, ok)
+		robot.Obey(map[Action]Command{II: I, LL: L, AA: A, RR: R}[what], avail)
 	}
 }

@@ -101,18 +101,24 @@ func TestStartRobot(t *testing.T) {
 	act := make(chan Action)
 	cases := []struct {
 		in   Command
-		want string
+		want Action
 	}{
-		{A, "north"},
-		{R, "south"},
-		{L, "east"},
+		{A, AA},
+		{R, RR},
+		{L, LL},
+		{I, II},
 	}
 	go StartRobot(cmd, act)
 	for _, c := range cases {
 		fmt.Println("sending", c.in)
 		cmd <- c.in
+		// must send to the act channel
+		resp := <-act
+		if resp != c.want {
+			t.Errorf("Sent %v, got %v, wanted %v", c.in, resp, c.want)
+		}
 	}
-	close(cmd)  // would normally defer these
+	close(cmd) // would normally defer these
 	close(act)
 	//fmt.Println("all done")
 }
@@ -124,10 +130,10 @@ func xTestRoom(t *testing.T) {
 		in   Action
 		want string
 	}{
-		{AN, "north"},
-		{AS, "south"},
-		{AE, "east"},
-		{AW, "west"},
+		{AA, "north"},
+		{RR, "south"},
+		{LL, "east"},
+		{II, "west"},
 	}
 	go Room(Rect{Pos{1, 1}, Pos{2, 2}}, Step2Robot{N, Pos{1, 1}}, act, rpt)
 	for _, c := range cases {
@@ -138,14 +144,14 @@ func xTestRoom(t *testing.T) {
 	close(rpt)
 }
 
-func TestTurnRobot(t *testing.T) {
+func xTestTurnRobot(t *testing.T) {
 	cases := []struct {
 		in   Command
 		want Dir
 	}{
 		{R, E}, {R, S}, {R, W}, {R, N}, {L, W},
 	}
-	ref_pos := Pos{1,1}
+	ref_pos := Pos{1, 1}
 	test_rob := Step2Robot{N, ref_pos}
 	for _, c := range cases {
 		fmt.Println("sending", c.in)
@@ -161,3 +167,97 @@ func TestTurnRobot(t *testing.T) {
 		}
 	}
 }
+
+func TestAdvanceRobot2Singles(t *testing.T) {
+	// first test single advances
+	cases := []struct {
+		in   Dir
+		want Pos
+	}{{N, Pos{0, 1}}, {E, Pos{1, 0}}, {S, Pos{0, -1}}, {W, Pos{-1, 0}}}
+	ref_pos := Pos{0, 0}
+	for _, c := range cases {
+		test_rob := Step2Robot{c.in, ref_pos}
+		test_rob.Advance(FreeSpaces{N:true, E:true, S:true, W:true})
+		if test_rob.Pos != c.want {
+			t.Errorf("Sent %v, Pos = %v, want %v", c.in, test_rob.Pos, c.want)
+		}
+	}
+}
+
+func TestAdvanceRobot2Multiples(t *testing.T) {
+	// test mulitple advances
+	cases := []struct {
+		in   Dir
+		want Pos
+	}{{N, Pos{0, 1}}, {E, Pos{1, 0}}, {S, Pos{0, -1}}, {W, Pos{-1, 0}}}
+	ref_pos := Pos{0, 0}
+	const repeats = 5
+	for _, c := range cases {
+		wanted := Pos{c.want.Easting * repeats, c.want.Northing * repeats}
+		test_rob := Step2Robot{c.in, ref_pos}
+		for i := 0; i < repeats; i++ {
+			test_rob.Advance(FreeSpaces{N:true, E:true, S:true, W:true})
+		}
+		if test_rob.Pos != wanted {
+			t.Errorf("Sent %v, Pos = %v, want %v", c.in, test_rob.Pos, wanted)
+		}
+	}
+}
+
+func TestAdvanceRobot2Limits(t *testing.T) {
+	// test mulitple advances
+	const lv = 3
+	cases := []struct {
+		in   Dir
+		want Pos
+	}{{N, Pos{0, lv}}, {E, Pos{lv, 0}}, {S, Pos{0, -lv}}, {W, Pos{-lv, 0}}}
+	ref_pos := Pos{0, 0}
+	//limit_pos := Pos{lv, lv}
+	const repeats = 5
+	for _, c := range cases {
+		fmt.Println("testing", c.in)
+		wanted := c.want
+		test_rob := Step2Robot{c.in, ref_pos}
+		for i := 0; i < repeats; i++ {
+			test_rob.Advance(FreeSpaces{N:true, E:true, S:true, W:true})
+		}
+		if test_rob.Pos != wanted {
+			t.Errorf("Sent %v, Pos = %v, want %v", c.in, test_rob.Pos, wanted)
+		}
+	}
+}
+
+
+func TestInsideRect(t *testing.T) {
+	// is pos inside rect?
+	const lv = 3
+	cases := []struct {
+		in   Pos
+		want bool
+	}{
+		{Pos{0, lv}, true},
+		{Pos{lv, 0}, true},
+		{Pos{0, -lv}, true},
+		{Pos{-lv, 0}, true},
+		{Pos{0, lv*2}, false},
+		{Pos{lv*2, 0}, false},
+		{Pos{0, -lv*2}, false},
+		{Pos{-lv*2, 0}, false},
+	}
+ 	const repeats = 5
+	//ref_pos := Pos{0, 0}
+	limit_pos := Pos{lv, lv}
+	test_rect := Rect{Pos{0, 0}, limit_pos}
+	for _, c := range cases {
+		// fmt.Println("testing", c.in)
+		wanted := c.want
+		// test_rob := Step2Robot{c.in, ref_pos}
+		// for i := 0; i < repeats; i++ {
+		// 	test_rect.Inside(Rect{Pos{0, 0}, limit_pos})
+		// }
+		if test_rect.Inside(c.in) != wanted {
+			t.Errorf("Sent %v, wanted %v", c.in, wanted)
+		}
+	}
+}
+
