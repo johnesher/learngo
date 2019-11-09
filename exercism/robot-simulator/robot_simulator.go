@@ -36,10 +36,10 @@ const (
 )
 
 const (
-	I Command = iota // ignore
-	L
-	A //exploits implicit repetition of the last non-empty expression list
-	R
+	I Command = ' ' // ignore
+	L = 'L'
+	A = 'A'
+	R = 'R'
 )
 
 type Action byte
@@ -47,7 +47,7 @@ type Action byte
 const (
 	II Action = iota // rotate left
 	LL               // rotate left
-	AA               // forward
+	AA               // advance
 	RR               // rotate right
 )
 
@@ -62,6 +62,11 @@ func (cmd Command) String() string {
 	return map[Command]string{L: "left", A: "advance", R: "right"}[cmd]
 }
 
+
+func (pos Pos) String() string {
+	return fmt.Sprintf("E:%d, N:%d", pos.Easting, pos.Northing)
+}
+
 func (dx *Dir) Turn(way Command) {
 	clockwise := map[Dir]Dir{N: E, E: S, S: W, W: N}
 	anticlock := map[Dir]Dir{N: W, W: S, S: E, E: N}
@@ -74,30 +79,32 @@ func (dx *Dir) Turn(way Command) {
 }
 
 // advance 1 step in current direction
-func (rob *Step2Robot) Advance(extent FreeSpaces) {
-	switch rob.Dir {
-	case N:
-		rob.Pos.Northing += 1
-	case E:
-		rob.Pos.Easting += 1
-	case S:
-		rob.Pos.Northing -= 1
-	case W:
-		rob.Pos.Easting -= 1
-	default:
-		fmt.Println("bad direction")
+func (rob *Step2Robot) Advance(avail FreeSpaces) {
+	type Movement struct{ dx, dy RU }
+	moves := map[Dir]Movement{N: {0, 1}, E: {1, 0}, S: {0, -1}, W: {-1, 0}}
+	// allowed, ok := avail[rob.Dir]
+	// if ok && allowed{
+	if avail[rob.Dir] {
+		move := moves[rob.Dir]
+		rob.Pos.Northing += move.dy
+		rob.Pos.Easting += move.dx
 	}
 }
 
 func (rob *Step2Robot) Turn(cmd Command) {
-	fmt.Println("gothere")
 	rob.Dir.Turn(cmd)
 }
 
-func (rob *Step2Robot) Obey(cmd Command, extent FreeSpaces) {
+
+func (rob Step2Robot) String()string {
+	return fmt.Sprintf("Step2Robot at %s, pointing %s", rob.Pos.String(), rob.Dir.String())
+}
+
+func (rob *Step2Robot) Obey(cmd Command, avail FreeSpaces) {
+	fmt.Println("obeying", cmd.String(), avail)
 	switch cmd {
 	case A:
-		rob.Advance(extent)
+		rob.Advance(avail)
 	case I:
 		// ignore it
 	default: // L or R
@@ -105,34 +112,50 @@ func (rob *Step2Robot) Obey(cmd Command, extent FreeSpaces) {
 	}
 }
 
-func (r Rect)Inside(pos Pos)bool{
+func (r Rect) Inside(pos Pos) bool {
 	return true
 }
 
 func StartRobot(cmd chan Command, act chan Action) {
 	for {
 		what, ok := <-cmd
-		fmt.Println("inpgot", what, ok)
+		// fmt.Println("StartRobot got", what, ok)
 		if !ok {
-			fmt.Println("channel closing")
+			fmt.Println("command channel closing")
+			close(act)
 			break
 		}
-		fmt.Println("got", what, ok)
-		act <- map[Command]Action{I: II, L: LL, A: AA, R: RR}[what]
+		fmt.Println("StartRobot sendng", what)
+		to_send, ok := map[Command]Action{I: II, L: LL, A: AA, R: RR}[what]
+		if !ok{
+			panic("unrecognised command")
+		}
+		act <- to_send
 	}
 }
 
 func Room(extent Rect, robot Step2Robot, act chan Action, rep chan Step2Robot) {
-	fmt.Println(extent, robot)
-	avail := FreeSpaces{N:true, E:true, S:true, W:true}
+	fmt.Println("Room", extent, robot)
 	for {
+		avail := FreeSpaces{N: true, E: true, S: true, W: true}
+		// complicated bit - establish if the robot can move
+		avail[N] = extent.Max.Northing != robot.Pos.Northing
+		avail[S] = extent.Min.Northing != robot.Pos.Northing
+		avail[E] = extent.Max.Easting != robot.Pos.Easting
+		avail[W] = extent.Min.Easting != robot.Pos.Easting
+		fmt.Println("Romm avail", avail, extent, robot.Pos)
 		what, ok := <-act
+		fmt.Println("Room got", what, ok)
 		if !ok {
-			fmt.Println("channel closing")
+			fmt.Println("action channel closing")
 			rep <- robot
 			break
 		}
-		fmt.Println("got", what, ok)
-		robot.Obey(map[Action]Command{II: I, LL: L, AA: A, RR: R}[what], avail)
+		cmd, ok := map[Action]Command{II: I, LL: L, AA: A, RR: R}[what]
+		if !ok{
+			panic("unrecognised action")
+		}
+		fmt.Printf("trying to obey %T, [%v]\n", cmd, cmd )
+		robot.Obey(cmd, avail)
 	}
 }
