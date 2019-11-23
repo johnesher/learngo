@@ -4,7 +4,6 @@ package robot
 
 import(
 	"testing"
-	"fmt"
 )
 
 // Step 3 has three major changes:
@@ -86,11 +85,8 @@ func TestOneStep3(t *testing.T) {
 			scr += string(testOneRobot[j].cmd)
 		}
 		t.Logf("Script %q", scr)
-		fmt.Printf("Script [%q]\n", scr)
 		go StartRobot3("Robbie", scr, act, log)
-		fmt.Println("here")
 		pls := <-rep
-		fmt.Println("not here")
 		lastTest := testOneRobot[i-1]
 		if len(pls) != 1 {
 			t.Fatalf("Got report on %d robots, want 1.", len(pls))
@@ -155,7 +151,7 @@ func TestSameName(t *testing.T) {
 	}
 }
 
-func xTestSamePosition(t *testing.T) {
+func TestSamePosition(t *testing.T) {
 	log := make(chan string)
 	nMsg := make(chan int)
 	go logMon(log, nMsg, t)
@@ -177,7 +173,7 @@ func xTestSamePosition(t *testing.T) {
 	}
 }
 
-func xTestOutsideRoom(t *testing.T) {
+func TestOutsideRoom(t *testing.T) {
 	log := make(chan string)
 	nMsg := make(chan int)
 	go logMon(log, nMsg, t)
@@ -195,7 +191,7 @@ func xTestOutsideRoom(t *testing.T) {
 	}
 }
 
-func xTestBadCommand(t *testing.T) {
+func TestBadCommand(t *testing.T) {
 	log := make(chan string)
 	nMsg := make(chan int)
 	go logMon(log, nMsg, t)
@@ -205,7 +201,7 @@ func xTestBadCommand(t *testing.T) {
 		Rect{Pos{0, 0}, Pos{0, 99}},
 		[]Step3Robot{{"Vgr", Step2Robot{N, Pos{0, 99}}}},
 		act, rep, log)
-	go StartRobot3("Vgr", "RET", act, log)
+	go StartRobot3("Vgr", "RRE", act, log)
 	<-rep
 	close(log)
 	if n := <-nMsg; n != 1 {
@@ -213,7 +209,7 @@ func xTestBadCommand(t *testing.T) {
 	}
 }
 
-func xTestBadRobot(t *testing.T) {
+func TestBadRobot(t *testing.T) {
 	log := make(chan string)
 	nMsg := make(chan int)
 	go logMon(log, nMsg, t)
@@ -231,11 +227,12 @@ func xTestBadRobot(t *testing.T) {
 	}
 }
 
-func xTestThree(t *testing.T) { // no bumping
+func TestThree(t *testing.T) { // no bumping
 	log := make(chan string)
 	nMsg := make(chan int)
 	go logMon(log, nMsg, t)
 	act := make(chan Action3)
+	// go StartRobot3("clutz", "LA", act, log)
 	go StartRobot3("clutz", "LAAARALA", act, log)
 	go StartRobot3("sphero", "RRAAAAALA", act, log)
 	go StartRobot3("roomba", "LAAARRRALLLL", act, log)
@@ -263,11 +260,11 @@ exp:
 				continue
 			}
 			if pl.Step2Robot.Pos != exp.Step2Robot.Pos {
-				t.Fatalf("%s at %v, want %v",
+				t.Errorf("%s at %v, want %v",
 					pl.Name, pl.Step2Robot.Pos, exp.Step2Robot.Pos)
 			}
 			if pl.Step2Robot.Dir != exp.Step2Robot.Dir {
-				t.Fatalf("%s facing %v, want %v",
+				t.Errorf("%s facing %v, want %v",
 					pl.Name, pl.Step2Robot.Dir, exp.Step2Robot.Dir)
 			}
 			continue exp

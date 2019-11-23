@@ -3,7 +3,6 @@
 package robot
 
 import (
-	"fmt"
 	"testing"
 	// "reflect"
 )
@@ -88,7 +87,6 @@ func TestStep2(t *testing.T) {
 		// fmt.Println("looped")
 		close(cmd)
 		da := <-rep
-		fmt.Println("da", da)
 		last := i - 1
 		want := test2[last].Step2Robot
 		if da.Dir != want.Dir {
@@ -97,8 +95,6 @@ func TestStep2(t *testing.T) {
 		if da.Pos != want.Pos {
 			t.Fatalf("Command #%d, Pos = %v, want %v", last, da.Pos, want.Pos)
 		}
-		fmt.Println("room test loop ended", i)
-		fmt.Println("room test loop ended")
 	}
 }
 
@@ -143,18 +139,14 @@ func TestRoomNoLimits(t *testing.T) {
 	//defer close(rpt)
 	//defer close(act)
 	for _, c := range cases {
-		fmt.Println("testingwiht", c)
 		rpt := make(chan Step2Robot)
 		act := make(chan Action)
 		go Room(Rect{Pos{0, 0}, Pos{2, 2}}, Step2Robot{N, Pos{1, 1}}, act, rpt)
 		for _, action := range c.in {
 			act <- action
 		}
-		fmt.Println("closing act")
 		close(act)  // triggers rpt
-		fmt.Println("act clised")
 		final := <- rpt
-		fmt.Println("testroom got", final)
 		if final.Pos != c.want{
 			t.Errorf("Sent %v, got %v, wanted %v", c.in, final.Pos, c.want)
 		}
@@ -277,7 +269,6 @@ func not_used_TestInsideRect(t *testing.T) {
 		{Pos{0, -lv * 2}, false},
 		{Pos{-lv * 2, 0}, false},
 	}
-	fmt.Println("just here to use fmt")
 	const repeats = 5
 	limit_pos := Pos{lv, lv}
 	test_rect := Rect{Pos{0, 0}, limit_pos}

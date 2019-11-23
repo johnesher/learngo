@@ -103,7 +103,6 @@ func (rob Step2Robot) String()string {
 }
 
 func (rob *Step2Robot) Obey(cmd Command, avail FreeSpaces) bool {
-	fmt.Println("obeying", cmd.String(), avail)
 	var retval bool = true
 	switch cmd {
 	case A:
@@ -115,7 +114,8 @@ func (rob *Step2Robot) Obey(cmd Command, avail FreeSpaces) bool {
 	case I:
 		// ignore it
 	default:
-		panic("unknown command in obey")
+		// cannot panic as need to log it
+		// panic("unknown command in obey")
 	}
 	return retval
 }
@@ -127,13 +127,10 @@ func (r Rect) Inside(pos Pos) bool {
 func StartRobot(cmd chan Command, act chan Action) {
 	for {
 		what, ok := <-cmd
-		// fmt.Println("StartRobot got", what, ok)
 		if !ok {
-			fmt.Println("command channel closing")
 			close(act)
 			break
 		}
-		fmt.Println("StartRobot sendng", what)
 		to_send, ok := map[Command]Action{I: II, L: LL, A: AA, R: RR}[what]
 		if !ok{
 			panic("unrecognised command")
@@ -143,7 +140,6 @@ func StartRobot(cmd chan Command, act chan Action) {
 }
 
 func Room(extent Rect, robot Step2Robot, act chan Action, rep chan Step2Robot) {
-	fmt.Println("Room", extent, robot)
 	for {
 		avail := FreeSpaces{N: true, E: true, S: true, W: true}
 		// complicated bit - establish if the robot can move
@@ -151,19 +147,15 @@ func Room(extent Rect, robot Step2Robot, act chan Action, rep chan Step2Robot) {
 		avail[S] = extent.Min.Northing != robot.Pos.Northing
 		avail[E] = extent.Max.Easting != robot.Pos.Easting
 		avail[W] = extent.Min.Easting != robot.Pos.Easting
-		fmt.Println("Romm avail", avail, extent, robot.Pos)
 		what, ok := <-act
-		fmt.Println("Room got", what, ok)
 		if !ok {
-			fmt.Println("action channel closing in Room", robot)
 			rep <- robot
 			break
 		}
 		cmd, ok := map[Action]Command{II: I, LL: L, AA: A, RR: R}[what]
 		if !ok{
-			panic("unrecognised action")
+			panic("unrecognised action in Room")
 		}
-		fmt.Printf("trying to obey %T, [%v]\n", cmd, cmd )
 		robot.Obey(cmd, avail)
 	}
 }
@@ -172,6 +164,10 @@ type Action3 struct{
 	action rune
 	name string
 }	
+
+func (act Action3) String() string {
+	return fmt.Sprintf("[name:%s, action:%v]", act.name, string(act.action))
+}
 
 const (
 	I3 rune = ' ' // ignore
@@ -183,11 +179,9 @@ const (
 
 func StartRobot3(name, script string, action chan Action3, log chan string){
 	for _, a := range script{
-		fmt.Println("sending", a)
 		action <- Action3{a, name}
 	}
-	// close(action)
-	action <- Action3{Q3, "quitter"}
+	action <- Action3{Q3, name}
 }
 
 func Room3(
@@ -196,51 +190,74 @@ func Room3(
 	action chan Action3,
 	report chan []Step3Robot,
 	log chan string) {
-	var names = make(map[string]int)
-	for _, rob := range robots{
+	defer close(report)
+	actions := map[rune]bool{I3:true, L3:true, A3:true, R3:true, Q3:true}
+	// map from name to robot
+	var names = make(map[string]*Step3Robot)
+	// map to use as sets to check for uniqueness
+	var initial_positions = make(map[Pos]int)
+	for i, rob := range robots{
 		if "" == rob.Name {
 			log <-"Room3 robot without a name"
 		}
 		_, ok := names[rob.Name]
-		fmt.Println("Room3 names", ok, rob.Name, names)
 		if ok {
 			log <- "duplicate name"
 		}else{
-			names[rob.Name] += 1
+			names[rob.Name] = &robots[i]
+		}
+		_, ok = initial_positions[rob.Step2Robot.Pos]
+		if ok {
+			log <- "initial positions"
+		}else{
+			initial_positions[rob.Step2Robot.Pos] += 1
+		}
+		outside_room := false ||
+			rob.Pos.Northing > extent.Max.Northing ||
+			rob.Pos.Northing < extent.Min.Northing ||
+			rob.Pos.Easting > extent.Max.Easting ||
+			rob.Pos.Easting < extent.Min.Easting
+		if outside_room {
+			log <-"outside room"
 		}
 	}
-	robot := &robots[0]
 	for {
 		what, ok := <-action
-		// if !ok{
-		// 	report <-robots
-		// }
-		fmt.Println("Room3 got", what, ok)
 		if !ok {
 			report <-robots
-			fmt.Println("action channel closed in Room3", robots)
 			break
 		}
-		if Q3 == what.action {
-			report <-robots
-			fmt.Println("action channel got quit in Room3", robots)
+		_, ok = actions[what.action]
+		if !ok {
+			log <- "unknown action in Room3"
+			continue
+		}
+		robot, ok := names[what.name]
+		if !ok{
+			log <-"unknown robot in room3"
 			break
+		}
+		cmd, ok := map[rune]Command{I3: I, L3: L, A3: A, R3: R, Q3: I}[what.action]
+		if !ok{
+			log <-"unrecognised action in Room3"
+			continue
+		}
+		if Q3 == what.action {
+			delete(names, what.name)
+			if 0 == len(names){
+				report <-robots
+				break  // should return now
+			}
 		}
 		avail := FreeSpaces{N: true, E: true, S: true, W: true}
 		avail[N] = extent.Max.Northing != robot.Pos.Northing
 		avail[S] = extent.Min.Northing != robot.Pos.Northing
 		avail[E] = extent.Max.Easting != robot.Pos.Easting
 		avail[W] = extent.Min.Easting != robot.Pos.Easting
-		fmt.Println("Romm avail", avail, extent, robot.Pos)
-		cmd, ok := map[rune]Command{I3: I, L3: L, A3: A, R3: R}[what.action]
-		if !ok{
-			panic("unrecognised action")
-		}
-		fmt.Printf("trying to obey %T, [%v]\n", cmd, cmd )
 		ok = robot.Obey(cmd, avail)
 		if !ok{
 			log <-"tried to hit wall"
 		}
-		fmt.Printf("after obey %v", robot)
+		
 	}
 }
