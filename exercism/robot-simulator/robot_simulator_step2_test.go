@@ -145,9 +145,9 @@ func TestRoomNoLimits(t *testing.T) {
 		for _, action := range c.in {
 			act <- action
 		}
-		close(act)  // triggers rpt
-		final := <- rpt
-		if final.Pos != c.want{
+		close(act) // triggers rpt
+		final := <-rpt
+		if final.Pos != c.want {
 			t.Errorf("Sent %v, got %v, wanted %v", c.in, final.Pos, c.want)
 		}
 	}
@@ -253,29 +253,3 @@ func TestAdvanceRobot2LimitsNoMovement(t *testing.T) {
 	}
 }
 
-func not_used_TestInsideRect(t *testing.T) {
-	// is pos inside rect?
-	const lv = 3
-	cases := []struct {
-		in   Pos
-		want bool
-	}{
-		{Pos{0, lv}, true},
-		{Pos{lv, 0}, true},
-		{Pos{0, -lv}, true},
-		{Pos{-lv, 0}, true},
-		{Pos{0, lv * 2}, false},
-		{Pos{lv * 2, 0}, false},
-		{Pos{0, -lv * 2}, false},
-		{Pos{-lv * 2, 0}, false},
-	}
-	const repeats = 5
-	limit_pos := Pos{lv, lv}
-	test_rect := Rect{Pos{0, 0}, limit_pos}
-	for _, c := range cases {
-		wanted := c.want
-		if test_rect.Inside(c.in) != wanted {
-			t.Errorf("Sent %v, wanted %v", c.in, wanted)
-		}
-	}
-}

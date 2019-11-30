@@ -2,7 +2,7 @@
 
 package robot
 
-import(
+import (
 	"testing"
 )
 
