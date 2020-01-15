@@ -1,7 +1,6 @@
 package erratum
 
-
-// open and use a resource
+/*Use opens and uses a resource with error handling*/
 func Use(o ResourceOpener, input string) (retval error) {
 	var res Resource
 	var err error
@@ -15,7 +14,7 @@ func Use(o ResourceOpener, input string) (retval error) {
 	}
 	// opened ok
 	defer res.Close()
-	defer func () {
+	defer func() {
 		switch v := recover().(type) {
 		case FrobError:
 			res.Defrob(v.defrobTag)
@@ -29,5 +28,5 @@ func Use(o ResourceOpener, input string) (retval error) {
 	// Finally call the target
 	res.Frob(input)
 	retval = nil
-	return  // retval
+	return // retval
 }
